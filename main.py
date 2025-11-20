@@ -26,7 +26,7 @@ class ButtonGeneratorApp:
         
         # Create the UI
         self.create_ui()
-        self.last_saved_color = (25, 25, 255, 255)
+        self.last_saved_color = (255, 0, 0, 255)
     
     def create_ui(self):
         """Create the user interface with procedurally generated buttons"""
@@ -97,7 +97,6 @@ class ButtonGeneratorApp:
 
     def test_color_picker_redesign(self):
         """Test color_picker_redesign"""
-        initial_color = self.last_saved_color
         import color_picker_redesign
         picker = color_picker_redesign.PhotoshopColorPicker(
             self.root,
@@ -114,9 +113,7 @@ class ButtonGeneratorApp:
 
     def test_button(self):
         """Test button for code snippets"""
-        width, height = 400, 300
-        rect_width, rect_height = width - 50, (height / 2) - 50
-        print(f"Rect Size: {rect_width}, {rect_height}")
+        import test
         # r, g, b, a = (50,25,230,0)
         # print(f"Start RGBA: {r}, {g}, {b}, {a}")
         # def test_func(c,m,y,k):

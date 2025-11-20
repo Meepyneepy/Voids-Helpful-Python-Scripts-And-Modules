@@ -65,11 +65,31 @@ def is_module_imported(name):
     
 
 if try_import("utils_extra_color_conversions"):
-    from utils_extra_color_conversions import rgb_to_cmyk, cmyk_to_rgb
+    from utils_extra_color_conversions import rgb_to_cmyk, cmyk_to_rgb, shift_image_hue_rgba, local_cmyk_to_rgb
+    #from utils_extra_color_conversions import selected_cmyk_profile, selected_rgb_profile, default_rgb_profile, default_cmyk_profile, cached_icc
 else:
     print(f"{Fore.RED}Advanced color conversion functions will not work until error is correct!{Style.RESET_ALL}")
 
 
+# perf_test_iterations = 25
+
+# from PIL import Image, ImageCms
+# def test_cmyk_to_rgb(
+#     cmyk_string: str | int | float,
+#     m: int | float | None = None,
+#     y: int | float | None = None,
+#     k: int | float | None = None,
+#     *,
+#     cmyk_profile: str = selected_cmyk_profile,
+#     rgb_profile: str = selected_rgb_profile,
+#     intent: int = ImageCms.Intent.RELATIVE_COLORIMETRIC,
+#     black_point_compensation: bool = True,
+#     out_format: str = "tuple"  # "tuple" or "str"
+# ) -> str:
+#     test_func = measure_performance(cmyk_to_rgb, cmyk_string, m, y, k, iterations=perf_test_iterations)
+#     print(f"Parsing CMYK Average time: {test_func['avg_time']:.6f}s")
+#     print(f"Parsing CMYK Total time: {test_func['total_time']:.6f}s")
+#     print()
 
 def sleep(duration=1.0):
     time.sleep(duration)
@@ -232,6 +252,9 @@ def Back_RGB(rgb, g=None, b=None):
     if isinstance(rgb, (list,tuple)) and not isinstance(rgb, int) and len(rgb) == 3:
         r,g,b = rgb
     return f"\033[48;2;{r};{g};{b}m"
+
+
+
 
 
 def set_file_permissions(path: str, mode="777"):
@@ -437,36 +460,36 @@ def is_valid_color(value, specific="nil", raiseError=False):
 
     checkedFormatsStr = ""
     if "nil" in specific:
-        checkedFormatsStr = "RGB/RGBA/HEX"
+        checkedFormatsStr = "rgb/rgba/hex"
     else:
-        checkedFormatsStr = "/".join(specific).upper()
+        checkedFormatsStr = "/".join(specific).lower()
 
     if isinstance(value, str):
         # HEX patterns
         hex_pattern = (
             r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
         )
-        if re.fullmatch(hex_pattern, value) and "hex" in specific:
+        if re.fullmatch(hex_pattern, value) and "hex" in checkedFormatsStr:
             return True
 
         # rgb() and rgba() string patterns
         rgb_pattern = r"^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$"
         rgba_pattern = r"^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(0|1|0?\.\d+)\s*\)$"
 
-        if m := re.fullmatch(rgb_pattern, value) and "rgb" in specific:
+        if m := re.fullmatch(rgb_pattern, value) and "rgb" in checkedFormatsStr:
             r, g, b = map(int, m.groups())
             return all(0 <= x <= 255 for x in (r, g, b))
 
-        if m := re.fullmatch(rgba_pattern, value) and "rgba" in specific:
+        if m := re.fullmatch(rgba_pattern, value) and "rgba" in checkedFormatsStr:
             r, g, b = map(int, m.groups()[:3])
             a = float(m.group(4))
             return all(0 <= x <= 255 for x in (r, g, b)) and 0.0 <= a <= 1.0
 
     # RGB or RGBA tuple/list
     if isinstance(value, (tuple, list)):
-        if len(value) == 3 and "rgb" in specific:
+        if len(value) == 3 and "rgb" in checkedFormatsStr:
             return all(isinstance(x, int) and 0 <= x <= 255 for x in value)
-        elif len(value) == 4 and "rgba" in specific:
+        elif len(value) == 4 and "rgba" in checkedFormatsStr:
             r, g, b, a = value
             return all(isinstance(x, int) and 0 <= x <= 255 for x in (r, g, b)) and (
                 isinstance(a, (float, int)) and 0.0 <= a <= 1.0
@@ -711,8 +734,8 @@ def adjust_color_for_contrast(fg, bg=None, adjust=-30):
     # print(f"new fg={fg}")
     # print(f"new bg={bg}")
 
-    def clamp(v):
-        return max(0, min(255, v))
+    def clamp(v, minimum=0, maximum=255):
+        return max(minimum, min(maximum, v))
 
     def brightness(color):
         r, g, b = color
@@ -799,3 +822,51 @@ def visual_ljust(s, width, fillchar=" "):
     visible_text = ANSI_ESCAPE.sub("", s)
     pad_len = max(0, width - len(visible_text))
     return s + (fillchar * pad_len)
+
+
+def measure_performance(func, *args, iterations=1, **kwargs):
+    """
+    Measures the execution time of a function.
+    
+    Args:
+        func: The function to measure
+        *args: Positional arguments to pass to the function
+        iterations: Number of times to run the function (default: 1)
+        **kwargs: Keyword arguments to pass to the function
+    
+    Returns:
+        A dictionary containing:
+            - 'result': The return value of the function
+            - 'total_time': Total execution time in seconds
+            - 'avg_time': Average execution time per iteration in seconds
+            - 'min_time': Minimum execution time in seconds
+            - 'max_time': Maximum execution time in seconds
+            - 'iterations': Number of iterations performed
+    
+    Usage:
+        def slow_function(x):
+            time.sleep(x)
+            return x * 2
+        
+        results = measure_performance(slow_function, 0.5, iterations=3)
+        print(f"Average time: {results['avg_time']:.4f}s")
+    """
+    times = []
+    result = None
+    
+    for _ in range(iterations):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        times.append(end_time - start_time)
+    
+    total_time = sum(times)
+    
+    return {
+        'result': result,
+        'total_time': total_time,
+        'avg_time': total_time / iterations,
+        'min_time': min(times),
+        'max_time': max(times),
+        'iterations': iterations
+    }

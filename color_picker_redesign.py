@@ -204,11 +204,11 @@ class PhotoshopColorPicker(tk.Toplevel):
         hsv_frame = tk.Frame(parent, bg='#3a3a3a')
         hsv_frame.pack(fill='x', pady=(0, 10))
         
-        self.h_slider = self._create_slider(hsv_frame, "H", "°", 0, 360, self.h, 
+        self.h_slider = self._create_slider(hsv_frame, "H", "°", None, 0, 360, self.h, 
                                            self._on_hsv_change)
-        self.s_slider = self._create_slider(hsv_frame, "S", "%", 0, 100, self.s * 100, 
+        self.s_slider = self._create_slider(hsv_frame, "S", "%", None, 0, 100, self.s * 100, 
                                            self._on_hsv_change)
-        self.v_slider = self._create_slider(hsv_frame, "V", "%", 0, 100, self.v * 100, 
+        self.v_slider = self._create_slider(hsv_frame, "V", "%", None, 0, 100, self.v * 100, 
                                            self._on_hsv_change)
         
         self.h_slider.bind('<ButtonRelease-1>', self._on_hsv_slider_release)
@@ -223,11 +223,11 @@ class PhotoshopColorPicker(tk.Toplevel):
         rgb_frame = tk.Frame(parent, bg='#3a3a3a')
         rgb_frame.pack(fill='x', pady=(0, 10))
         
-        self.r_slider = self._create_slider(rgb_frame, "R", "", 0, 255, self.r, 
+        self.r_slider = self._create_slider(rgb_frame, "R", "", "#4C2A2A", 0, 255, self.r, 
                                            self._on_rgb_change)
-        self.g_slider = self._create_slider(rgb_frame, "G", "", 0, 255, self.g, 
+        self.g_slider = self._create_slider(rgb_frame, "G", "", "#2F4C2A", 0, 255, self.g, 
                                            self._on_rgb_change)
-        self.b_slider = self._create_slider(rgb_frame, "B", "", 0, 255, self.b, 
+        self.b_slider = self._create_slider(rgb_frame, "B", "", "#2A2B4C", 0, 255, self.b, 
                                            self._on_rgb_change)
         
         self.r_slider.bind('<ButtonRelease-1>', self._on_rgb_slider_release)
@@ -244,13 +244,13 @@ class PhotoshopColorPicker(tk.Toplevel):
         
         c, m, y, k = self.rgb_to_cmyk(self.r, self.g, self.b)
         
-        self.c_slider = self._create_slider(cmyk_frame, "C", "%", 0, 100, c, 
+        self.c_slider = self._create_slider(cmyk_frame, "C", "%", "#2A4C4B", 0, 100, c, 
                                            self._on_cmyk_change)
-        self.m_slider = self._create_slider(cmyk_frame, "M", "%", 0, 100, m, 
+        self.m_slider = self._create_slider(cmyk_frame, "M", "%", "#4A2A4C", 0, 100, m, 
                                            self._on_cmyk_change)
-        self.y_slider = self._create_slider(cmyk_frame, "Y", "%", 0, 100, y, 
+        self.y_slider = self._create_slider(cmyk_frame, "Y", "%", "#4C4C2A", 0, 100, y, 
                                            self._on_cmyk_change)
-        self.k_slider = self._create_slider(cmyk_frame, "K", "%", 0, 100, k, 
+        self.k_slider = self._create_slider(cmyk_frame, "K", "%", "#4C4C4C", 0, 100, k, 
                                            self._on_cmyk_change)
         
         self.c_slider.bind('<ButtonRelease-1>', self._on_cmyk_slider_release)
@@ -262,8 +262,15 @@ class PhotoshopColorPicker(tk.Toplevel):
         self.y_slider.bind('<Button-1>', self._on_cmyk_slider_press)
         self.k_slider.bind('<Button-1>', self._on_cmyk_slider_press)
         
-    def _create_slider(self, parent, label, unit, from_, to, initial, command):
+    def _create_slider(self, parent, label, unit, color, from_, to, initial, command):
         """Create a slider row"""
+        print(f"Creating slider: {label} with initial color {color} = {utils.is_valid_color(color)}")
+        if utils.is_valid_color(color):
+            print(f"Using custom color for {label} slider: {color}")
+            bg_color = color
+        else:
+            print(f"Using default color for {label} slider")
+            bg_color = '#2a2a2a'
         frame = tk.Frame(parent, bg='#3a3a3a')
         frame.pack(fill='x', pady=2)
         
@@ -272,13 +279,13 @@ class PhotoshopColorPicker(tk.Toplevel):
         lbl.pack(side='left', padx=(0, 5))
         
         slider = tk.Scale(frame, from_=from_, to=to, orient='horizontal',
-                         bg='#4a4a4a', fg='white', troughcolor='#2a2a2a',
+                         bg='#4a4a4a', fg='white', troughcolor=bg_color,
                          highlightthickness=0, showvalue=0, length=600,
                          command=command)
         slider.set(initial)
         slider.pack(side='left', fill='x', expand=True, padx=(0, 5))
         
-        value_label = tk.Label(frame, text=str(int(initial)), bg='#2a2a2a', 
+        value_label = tk.Label(frame, text=str(int(initial)), bg=bg_color, 
                               fg='white', font=('Arial', 9), width=5)
         value_label.pack(side='left', padx=(0, 5))
         
@@ -394,7 +401,7 @@ class PhotoshopColorPicker(tk.Toplevel):
         # Create image
         if self.initial_draw == True:
             # Draw color wheel (hue ring)
-            img = Image.new('RGB', (size, size), '#4a4a4a')
+            img = Image.new('RGB', (size, size), "#4a4a4a00") #'#4a4a4a'
             draw = ImageDraw.Draw(img)
             for angle in range(360):
                 rad = math.radians(angle)
@@ -414,13 +421,22 @@ class PhotoshopColorPicker(tk.Toplevel):
             img = self.initial_wheel_image.copy()
             draw = ImageDraw.Draw(img)
 
-        # Draw triangle for S/V selection
-        if svonly == False or self.initial_draw == True:
-            self._draw_sv_triangle(draw, center, inner_radius - 30)
-            self.initial_triangle_image = img.copy()
-        else:
-            img = self.initial_triangle_image.copy()
-            draw = ImageDraw.Draw(img)
+        # # Draw triangle for S/V selection
+        # if svonly == False or self.initial_draw == True:
+        #     # Create triangle image
+        #     # tri_img = Image.new('RGBA', (size, size), "#7c7c7c00") #'#4a4a4a'
+        #     # tri_draw = ImageDraw.Draw(tri_img)
+        #     self._draw_sv_triangle(img, center, inner_radius)
+        #     #img.save("debug_triangle.png")
+            
+
+        #     # Now edit the main image to add created triangle image
+        #     #self._draw_sv_triangle(img, center, inner_radius)
+        # else:
+        #     img = self.initial_triangle_image.copy()
+        #     draw = ImageDraw.Draw(img)
+
+        self._draw_sv_triangle(img, center, inner_radius)
             
             
         # Convert to PhotoImage
@@ -432,51 +448,123 @@ class PhotoshopColorPicker(tk.Toplevel):
         
 
 
-    def _draw_sv_triangle(self, draw, center, radius):
+    def _draw_sv_triangle(self, img, center, radius):
         """Draw saturation/value triangle"""
+        radius_offset = 30 # Padding from inner edge of wheel to triangle vertex
         # Calculate triangle points based on current hue
-        angle_offset = math.radians(self.h)
-        
+        if self.initial_draw == True:
+            angle_offset = math.radians(0)  # Pointing up
+        else:
+            angle_offset = math.radians(self.h)
+            
         points = []
         for i in range(3):
             angle = angle_offset + (i * 2 * math.pi / 3)
-            x = center + int(radius * math.cos(angle))
-            y = center + int(radius * math.sin(angle))
+            x = center + int((radius - radius_offset) * math.cos(angle))
+            y = center + int((radius - radius_offset) * math.sin(angle))
             points.append((x, y))
-            draw.point((x, y), fill="green")
+            #draw.point((x, y), fill="transparent")
         
         self.triangle_points = points
+
+        if self.initial_draw == True:
+            tri_img = Image.new('RGBA', (450, 450), "#7c7c7c00") #'#4a4a4a'
+            tri_draw = ImageDraw.Draw(tri_img)
+            # Create first triangle image
+            
+            # Fill triangle with gradient (simplified - just draw from corners)
+            # Top vertex: white (S=0, V=1)
+            # Bottom-left: black (S=any, V=0)
+            # Bottom-right: pure hue (S=1, V=1)
+            
+            # Sample points within triangle and color them
+            # steps = 50
+            # dot_size = 7
+
+            steps = 255
+            dot_size = 1
+            print(f"\n\n{self.h}\n\n")
+            for i in range(steps):
+                for j in range(steps - i):
+                    # Barycentric coordinates
+                    w = 1 - (i + j) / steps  # Weight for p0 (white)
+                    u = i / steps             # Weight for p1 (black)
+                    v = j / steps             # Weight for p2 (pure hue)
+                    
+                    if w < 0:
+                        continue
+                    
+                    # Map to S/V
+                    # sat = w / (w + v) if (w + v) > 0 else 0
+                    sat = w / (w + v) if (w + v) > 0 else 0
+                    val = w + v
+
+                    #r, g, b = self.hsv_to_rgb(self.h, sat, val)
+                    r, g, b = self.hsv_to_rgb(0.0, sat, val)
+                    #color = f'#{r:02x}{g:02x}{b:02x}'
+                    color = (r, g, b, 255)
+
+                    
+                    x = int(points[0][0] * w + points[1][0] * u + points[2][0] * v)
+                    y = int(points[0][1] * w + points[1][1] * u + points[2][1] * v)
+                    
+                    # 
+                    tri_draw.ellipse([(x-dot_size/2, y-dot_size/2), (x+dot_size/2, y+dot_size/2)], fill=color)
+
+            tri_img.save("debug_triangle.png")
+
+            self.initial_triangle_image = tri_img.copy() # Save base triangle image
+        else:
+            tri_img = self.initial_triangle_image.copy()
+            tri_draw = ImageDraw.Draw(tri_img)
+
+        #print(self.h)
+
+        tri_img = utils.shift_image_hue_rgba(tri_img, (self.h/360)*255)
+        tri_img = tri_img.rotate(-self.h, resample=Image.BICUBIC, center=(center, center), expand=False)
+
+        # Center the rotated foreground on the background
+        bg_w, bg_h = img.size
+        fg_w, fg_h = tri_img.size
+        pos = ((bg_w - fg_w) // 2, (bg_h - fg_h) // 2)
+
+        img.paste(tri_img, pos, tri_img)  # uses alpha channel of rotated_fg as mask
+
+            
         
-        # Fill triangle with gradient (simplified - just draw from corners)
-        # Top vertex: white (S=0, V=1)
-        # Bottom-left: black (S=any, V=0)
-        # Bottom-right: pure hue (S=1, V=1)
+
         
-        # Sample points within triangle and color them
-        steps = 50
-        dot_size = 7
-        for i in range(steps):
-            for j in range(steps - i):
-                # Barycentric coordinates
-                w = 1 - (i + j) / steps  # Weight for p0 (white)
-                u = i / steps             # Weight for p1 (black)
-                v = j / steps             # Weight for p2 (pure hue)
+        
+
+        
+        # BACKUP
+         # steps = 255
+        # dot_size = 1
+        # for i in range(steps):
+        #     for j in range(steps - i):
+        #         # Barycentric coordinates
+        #         w = 1 - (i + j) / steps  # Weight for p0 (white)
+        #         u = i / steps             # Weight for p1 (black)
+        #         v = j / steps             # Weight for p2 (pure hue)
                 
-                if w < 0:
-                    continue
+        #         if w < 0:
+        #             continue
                 
-                # Map to S/V
-                sat = w / (w + v) if (w + v) > 0 else 0
-                val = w + v
+        #         # Map to S/V
+        #         # sat = w / (w + v) if (w + v) > 0 else 0
+        #         sat = w / (w + v) if (w + v) > 0 else 0
+        #         val = w + v
                 
-                r, g, b = self.hsv_to_rgb(self.h, sat, val)
-                color = f'#{r:02x}{g:02x}{b:02x}'
+        #         r, g, b = self.hsv_to_rgb(self.h, sat, val)
+        #         color = f'#{r:02x}{g:02x}{b:02x}'
                 
-                x = int(points[0][0] * w + points[1][0] * u + points[2][0] * v)
-                y = int(points[0][1] * w + points[1][1] * u + points[2][1] * v)
+        #         x = int(points[0][0] * w + points[1][0] * u + points[2][0] * v)
+        #         y = int(points[0][1] * w + points[1][1] * u + points[2][1] * v)
                 
-                # 
-                draw.ellipse([(x-dot_size/2, y-dot_size/2), (x+dot_size/2, y+dot_size/2)], fill=color)
+        #         # 
+        #         draw.ellipse([(x-dot_size/2, y-dot_size/2), (x+dot_size/2, y+dot_size/2)], fill=color)
+
+
                 
                 
                 
@@ -947,16 +1035,19 @@ class PhotoshopColorPicker(tk.Toplevel):
             # self._draw_checkerboard()
         else:
             self._update_hsv_sliders()
+
+        self._slow_update_other_sliders("rgb","cmyk")
         self._update_all(svonly=svonly)
-        utils.multithread_func(self, lambda: self._slow_update_other_sliders("rgb","cmyk"), True, False, None, True, "slow_update_cmyk_rgb_sliders")
+        #utils.multithread_func(self, lambda: self._slow_update_other_sliders("rgb","cmyk"), True, False, None, True, "slow_update_cmyk_rgb_sliders")
 
     def _update_from_rgb(self):
         """Update HSV from RGB"""
         self.h, self.s, self.v = self.rgb_to_hsv(self.r, self.g, self.b)
         self.c, self.m, self.y, self.k = utils.rgb_to_cmyk(self.r, self.g, self.b)
         self._update_rgb_sliders()
+        self._slow_update_other_sliders("hsv","cmyk","wheel","checkerboard")
         self._update_all()
-        utils.multithread_func(self, lambda: self._slow_update_other_sliders("hsv","cmyk","wheel","checkerboard"), True, False, None, True, "slow_update_cmyk_hsv_sliders")
+        #utils.multithread_func(self, lambda: self._slow_update_other_sliders("hsv","cmyk","wheel","checkerboard"), True, False, None, True, "slow_update_cmyk_hsv_sliders")
         #self._update_all()
 
     def _update_from_cmyk(self):
@@ -965,8 +1056,9 @@ class PhotoshopColorPicker(tk.Toplevel):
         self.r, self.g, self.b = utils.cmyk_to_rgb(self.c, self.m, self.y, self.k)
         self.h, self.s, self.v = self.rgb_to_hsv(self.r, self.g, self.b)
         self._update_cmyk_sliders()
+        self._slow_update_other_sliders("hsv","rgb","wheel","checkerboard")
         self._update_all()
-        utils.multithread_func(self, lambda: self._slow_update_other_sliders("rgb","hsv","wheel","checkerboard"), True, False, None, True, "slow_update_hsv_rgb_sliders")
+        #utils.multithread_func(self, lambda: self._slow_update_other_sliders("rgb","hsv","wheel","checkerboard"), True, False, None, True, "slow_update_hsv_rgb_sliders")
         #self._update_all()
 
 
@@ -1053,7 +1145,7 @@ class PhotoshopColorPicker(tk.Toplevel):
 
     def _slow_update_other_sliders(self, *sliders):
         """Available Sliders: "rgb", "hsv", "cmyk" """
-        utils.sleep(0.01)
+        #utils.sleep(0.01)
         for slider in sliders:
             slider = str.lower(slider)
             if slider == "rgb":
