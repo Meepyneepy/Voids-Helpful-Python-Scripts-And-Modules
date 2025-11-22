@@ -21,6 +21,7 @@ class ButtonGeneratorApp:
             "Show Info": self.show_info,
             "Test v_Color_Picker.py": self.test_color_picker,
             "Test color_picker_redesign.py": self.test_color_picker_redesign,
+            "Test Module Manager": self.test_module_manager,
             "Test Button": self.test_button,
         }
         
@@ -110,6 +111,13 @@ class ButtonGeneratorApp:
         new_c,new_m,new_y,new_k = utils.rgb_to_cmyk(new_r, new_g, new_b)
         print(f"CMYK->RGB = {utils.cmyk_to_rgb(new_c, new_m, new_y, new_k)}")
         #messagebox.showinfo("", f"Initial Color: {str(initial_color)}\n\nReturned Color: {result}")
+
+    def test_module_manager(self):
+        """Test module_manager_redesign"""
+        import module_manager_redesign
+        manager = module_manager_redesign.ModuleCheckerGUI(self.root, "eye_dropper_TEST.py")
+        manager.show()
+
 
     def test_button(self):
         """Test button for code snippets"""

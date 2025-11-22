@@ -20,6 +20,7 @@ import tkinter.font as tkfont
 from tkinter import ttk
 import math
 import utils
+import yeetusssss
 
 try:
     from PIL import ImageGrab, ImageTk, Image, ImageDraw
