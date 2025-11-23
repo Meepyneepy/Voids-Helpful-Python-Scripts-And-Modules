@@ -493,7 +493,7 @@ def is_valid_color(value, specific="nil", raiseError=False):
             r, g, b, a = value
             return all(isinstance(x, int) and 0 <= x <= 255 for x in (r, g, b)) and (
                 isinstance(a, (float, int)) and 0.0 <= a <= 1.0
-            )
+            ) or (isinstance(a, int) and 0 <= a <= 255)
 
     if raiseError:
         raise ValueError(f"'{value}' is not a valid {checkedFormatsStr} value!")
@@ -517,7 +517,9 @@ def rgb_to_hex(rgb):
     if len(rgb) == 4:
         is_valid_color(rgb, specific="rgba", raiseError=True)
         r, g, b, a = rgb
-        return f"#{r:02X}{g:02X}{b:02X}{(round(a * 255)):02X}".format(*rgb)
+        if isinstance(a, float):
+            a = round(a * 255)
+        return f"#{r:02X}{g:02X}{b:02X}{a:02X}".format(*rgb)
     else:
         is_valid_color(rgb, specific="rgb", raiseError=True)
         return "#{:02X}{:02X}{:02X}".format(*rgb)

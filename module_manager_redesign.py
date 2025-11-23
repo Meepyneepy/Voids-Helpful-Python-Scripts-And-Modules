@@ -9,157 +9,6 @@ import importlib.util
 import ast
 import os
 
-class c_UIAppearance:
-    def __init__(self):
-        # ALWAYS USE "style.theme_use('clam')" FOR THE MOST SUPPORT!
-        self.globalMainFontFamily = "Arial"
-
-        self.mainBG = "#242424"  # "#1a1a1a"
-        self.mainTextBoxBG = [self.mainBG, 10]
-        self.mainBorderColor = "#424242"
-        self.mainBorderWidth = 1
-
-
-        self.mainTreeviewBG = self.mainTextBoxBG
-        self.mainTreeviewFieldBG = self.mainTreeviewBG
-        self.mainTreeviewSelectedBG = '#4a6984'
-        self.mainTreeviewActiveBG = [self.mainTreeviewBG, self.mainTreeviewSelectedBG, 0.2] # When mouse hovers over
-        self.mainTreeviewRowHeight = 24
-        self.mainTreeviewTextColor = "white"
-        self.mainTreeviewDisabledTextColor = "#888888"
-        self.mainTreeviewFontFamily = self.globalMainFontFamily #"Segoe UI"
-        self.mainTreeviewFontSize = 10
-        self.mainTreeviewFontWeight = "normal"
-        self.mainTreeviewFont = (self.mainTreeviewFontFamily, self.mainTreeviewFontSize, self.mainTreeviewFontWeight)
-
-        self.mainTreeviewHeadingBG = [self.mainTreeviewBG, -10]
-        self.mainTreeviewHeadingActiveBG = [self.mainTreeviewHeadingBG, +15] # When mouse hovers over
-        self.mainTreeviewHeadingTextColor = self.mainTreeviewTextColor
-        self.mainTreeviewHeadingFontFamily = self.globalMainFontFamily
-        self.mainTreeviewHeadingFontSize = self.mainTreeviewFontSize
-        self.mainTreeviewHeadingFontWeight = "bold"
-        self.mainTreeviewHeadingFont = (self.mainTreeviewHeadingFontFamily, self.mainTreeviewHeadingFontSize, self.mainTreeviewHeadingFontWeight)
-        
-
-
-        self.mainTextColor = "#ECECEC"
-        self.submainTextColor = [self.mainTextColor, -30]
-        self.hiddenTextColor = [self.mainTextColor, -50]
-        self.mainFontFamily = self.globalMainFontFamily   #"Sans Serif Collection"
-        self.mainSymbolsFontFamily = self.globalMainFontFamily #"Noto Sans Symbols"
-        self.mainSymbolsFontFamilySizeMult = 1
-        self.mainFontSize = 18
-        self.mainTitleFontSize = 20
-        self.mainSubtextFontSize = 16
-        self.mainFontWeight = "normal"
-
-
-        self.mainButtonColor = "#343434"
-        self.mainButtonColorDarker = [self.mainButtonColor, -5]
-        self.mainOptionMenuButtonColor = [self.mainButtonColor, +5]
-        self.mainButtonColorHover = [self.mainButtonColor, -10]
-        self.mainButtonBorderColor = [self.mainButtonColor, -30]
-        self.mainButtonBorderWidth = 1
-        self.mainButtonTextColor = "#D2D2D2"
-
-        self.test1 = "#929292"
-        self.test2 = [self.test1, -89]
-        self.test3 = [self.test2, "#7A086B", 0.5]
-        self.test3 = [self.test3, "#9900FF", 0.5]
-
-
-        # self.mainFontFunc = customtkinter.CTkFont(family=self.mainFontFamily, size=self.mainFontSize, weight=self.mainFontWeight)
-
-
-uia = c_UIAppearance()
-  
-
-def resolve_actual_color(attribute, _debug_print=False, loopcount=0):
-    #print(f"::: Attribute: {getattr(uia, attribute)}, type: {type(getattr(uia, attribute))}")
-
-    """Resolve to the base color and accumulate all adjustments."""
-
-    if loopcount > 10:
-        raise ValueError(f"resolve_actual_color loopcount exceeded limit of 10!")
-    
-    adjustments = 0
-    try:
-        current = getattr(uia, attribute)
-    except:
-        current = attribute
-
-    if _debug_print: print(f"org current: {current}")
-
-    while isinstance(current, list): # and isinstance(current[1], (int, float)):
-        if isinstance(current[1], (int, float)):
-            adjustments += current[1]
-            current = current[0]
-        elif ((isinstance(current[0], list) or utils.is_valid_color(current[0]))
-        and (isinstance(current[1], list) or utils.is_valid_color(current[1]))
-        or isinstance(current[2], (int, float))):
-            
-            adjustments = 0
-            if _debug_print: print(f"{utils.Fore.BLUE}BLENDED COLOR: {current}{utils.Fore.RESET}")
-
-            current0name, current1name = "", ""
-            if _debug_print: print(f"{utils.Fore.GREEN}Looking for;\ncurrent[0] = {current[0]}\ncurrent1 = {current[1]}{utils.Fore.RESET}")
-            for attr in dir(uia):
-                if not attr.startswith("__"):
-                    if _debug_print: print(f"checking {attr}: {getattr(uia, attr)}")
-                    if getattr(uia, attr) == current[0]:
-                        current0name = attr
-                        if _debug_print: print(f"{utils.Fore.GREEN}Found current0name: {current0name}{utils.Fore.RESET}")
-                    
-                    if getattr(uia, attr) == current[1]:
-                        current1name = attr
-                        if _debug_print: print(f"{utils.Fore.GREEN}Found current1name: {current1name}{utils.Fore.RESET}")
-
-                    if current1name != "" and current0name != "":
-                        break
-
-            if current0name == "":
-                current0name = current[0]
-            if current1name == "":
-                current1name = current[1]
-
-
-            
-            current = utils.blend_colors(resolve_actual_color(current0name, _debug_print=_debug_print, loopcount=loopcount+1), resolve_actual_color(current1name, _debug_print=_debug_print, loopcount=loopcount+1), current[2])
-        else:
-            if _debug_print: print(f"{utils.Fore.RED}Broke out of is instance loop! CURRENT: {current}{utils.Fore.RESET}")
-            break
-            
-
-        
-
-    if _debug_print: print(f"new current: {current}  new adjust: {adjustments}")
-    #print(f"::: NEW Attribute: {current}, Adjustments: {(current)}")
-
-    if not utils.get_color_type(current):
-        #raise ValueError(f"Base color '{current}' is not a valid color")
-        return False
-    
-    
-
-    final_rgb = utils.adjust_color_for_contrast(fg=current, adjust=adjustments)
-    return utils.rgb_to_hex(final_rgb)
-    
-
-
-
-for attr in dir(uia):
-    if not attr.startswith("__"):
-        if (isinstance(getattr(uia, attr), list) 
-            and (isinstance(getattr(uia, attr)[1], (int, float)) or isinstance(getattr(uia, attr)[2], (int, float)))):
-            # AKA: Match: ([_, int] or [_, _, int])
-
-            #print(f"\n\nattribute {utils.Fore.YELLOW}{attr}{utils.Fore.RESET} is color")
-            #print(f"Dive to actual color: {dive_to_actual_color(attr)}")
-            newattr = resolve_actual_color(attr)
-            print(f"::: {utils.Fore.YELLOW}{attr}{utils.Fore.RESET} {f"| {utils.Fore.CYAN}{utils.Style.BRIGHT}BLENDED{utils.Fore.RESET}{utils.Style.RESET_ALL} |" if len(getattr(uia, attr)) == 3 else ""} New Color: {newattr}  NEW RGB: {utils.hex_to_rgb(newattr)}  {utils.Fore_RGB(utils.hex_to_rgb(newattr))}██{utils.Fore.RESET}")
-            setattr(uia, attr, newattr)
-#resolve_actual_color("mainTreeviewActiveBG", _debug_print=True)
-
 
 
 module_translation = {
@@ -200,7 +49,7 @@ def check_missing_imports(module_list):
 
 
 
-class FixDialog(tk.Toplevel):
+class ModuleCheckerAPP(tk.Toplevel):
     def __init__(self, parent = None, module_name=""):
         if parent is None:
             parent = tk.Tk()
@@ -261,10 +110,69 @@ class FixDialog(tk.Toplevel):
         self.vars = {}
 
         ttk.Label(main, text="Missing Modules").pack(pady=(10, 5))
+
+        # Create scrollable frame for modules
+        container = tk.Frame(main, bg=self.bg_color, height=150)
+        # container.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        container.pack(fill="both", expand=True, pady=(0, 10))
+        container.pack_propagate(False)  # Prevent container from shrinking to fit content
+
+        canvas = tk.Canvas(container, bg=self.bg_color, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        self.scrollable_frame = tk.Frame(canvas, bg=self.bg_color)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas_window = canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Make scrollable_frame expand to canvas width
+        def _configure_canvas(event):
+            canvas.itemconfig(canvas_window, width=event.width)
+        canvas.bind("<Configure>", _configure_canvas)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Bind mousewheel scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        self.imports_label_list = []
+
+        self.populate_module_list()
+
         
 
+        # Button frame for Install All and Open Folder buttons
+        button_frame = tk.Frame(main, bg=self.bg_color)
+        button_frame.pack(pady=10)
+        
+        all_btn = ttk.Button(button_frame, text="Install All", command=self.install_all)
+        all_btn.pack(side="left", padx=5)
+        
+        folder_btn = ttk.Button(button_frame, text="Open Modules Folder", command=self.open_modules_folder)
+        folder_btn.pack(side="left", padx=5)
+
+        self.output_text = tk.Text(main, height=10, bg="#2E2E2E", fg=self.fg_color)
+        self.output_text.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        
+
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+        self.shed_focus_force = self.after(100, lambda: self.focus_force())
+        self.grab_set()
+
+    
+
+    def populate_module_list(self):
         for mod in self.missing:
-            frame = tk.Frame(main)
+            frame = tk.Frame(self.scrollable_frame)
             frame.configure(bg="#2E2E2E")
             frame.pack(fill="x", padx=10, pady=2)
 
@@ -277,9 +185,11 @@ class FixDialog(tk.Toplevel):
                                 command=lambda m=mod: self.install_package(m))
             btn.pack(side="right", padx=(0, 0))
 
+            self.imports_label_list.append(frame)
+
         for mod in self.imports:
             if mod not in self.missing:
-                frame = tk.Frame(main)
+                frame = tk.Frame(self.scrollable_frame)
                 frame.configure(bg="#2E2E2E")
                 frame.pack(fill="x", padx=10, pady=2)
 
@@ -294,20 +204,17 @@ class FixDialog(tk.Toplevel):
                 installed_label.pack(side="right", padx=(0, 0))
                 # btn.pack(side="right", padx=(0, 0))
 
-        all_btn = ttk.Button(main, text="Install All", command=self.install_all)
-        all_btn.pack(pady=10)
+                self.imports_label_list.append(frame)
 
-        self.output_text = tk.Text(main, height=10, bg=uia.mainTextBoxBG, fg=uia.mainTextColor)
-        self.output_text.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+    def clear_module_list(self):
+        for widget in self.imports_label_list:
+            widget.destroy()
+        self.imports_label_list.clear()
 
-        # def on_close():
-        #     self.destroy()
-
-        # self.protocol("WM_DELETE_WINDOW", on_close)
-
-        self.after(100, lambda: self.focus_force())
-        self.grab_set()
-        self.wait_window()
+    def refresh_module_list(self):
+        self.clear_module_list()
+        self.missing = check_missing_imports(self.imports)
+        self.populate_module_list()
         
 
     def install_package(self, module):
@@ -320,18 +227,64 @@ class FixDialog(tk.Toplevel):
         except Exception as e:
             self.output_text.insert(tk.END, f"Failed to install {module}: {e}\n")
 
+        self.refresh_module_list()
+
     def install_all(self):
         for mod in self.missing:
             self.install_package(mod)
+
+    def open_modules_folder(self):
+        """Open file explorer to the site-packages folder where modules are installed"""
+        import subprocess
+        import site
+        import platform
+        
+        # Get the site-packages directory
+        site_packages = site.getsitepackages()
+        
+        if site_packages:
+            # Use the first site-packages directory (usually the main one)
+            folder_path = site_packages[0]
+            
+            # Open folder based on platform
+            try:
+                system = platform.system()
+                if system == 'Windows':
+                    subprocess.Popen(['explorer', folder_path])
+                elif system == 'Darwin':  # macOS
+                    subprocess.Popen(['open', folder_path])
+                elif system == 'Linux':
+                    subprocess.Popen(['xdg-open', folder_path])
+                else:
+                    self.output_text.insert(tk.END, f"Unsupported platform: {system}\nFolder path: {folder_path}\n")
+                    self.output_text.see(tk.END)
+                    return
+                
+                self.output_text.insert(tk.END, f"Opening folder: {folder_path}\n")
+                self.output_text.see(tk.END)
+            except Exception as e:
+                self.output_text.insert(tk.END, f"Failed to open folder: {e}\n")
+                self.output_text.see(tk.END)
 
     def show(self):
         """Show dialog and wait for result"""
         self.wait_window(self)
         return self.result
+    
+    def on_close(self):
+        print("ModuleCheckerGUI: on_close called")
+        #self.after_cancel(self.shed_focus_force)
+        self.destroy()
+        # Clean up the root window if we own it
+        if self._owns_root and self.master:
+            try:
+                self.master.destroy()
+            except:
+                pass
 
 if __name__ == '__main__':
     # Test the color picker
-    py_module_manager = FixDialog(module_name="eye_dropper_TEST.py")
+    py_module_manager = ModuleCheckerAPP(module_name="utils.py")
     result = py_module_manager.show()
     
     if result:

@@ -21,6 +21,21 @@ from tkinter import ttk
 import math
 import utils
 import yeetusssss
+import okayayay
+import fjkdslafdsa
+import okdfsas
+import okasfdsfadsafd
+import osososos
+import osfde
+import ofkdsfoa
+import oskdfds
+import ofdsafdd
+import fdsadd
+import fodsaopdfspos
+import ofewfdsa
+import wocxz
+import fowenmds
+import kjfsoixic
 
 try:
     from PIL import ImageGrab, ImageTk, Image, ImageDraw

@@ -5,7 +5,7 @@ import utils
 from PIL import Image, ImageDraw, ImageTk, ImageFont
 
 
-class PhotoshopColorPicker(tk.Toplevel):
+class ColorPickerAPP(tk.Toplevel):
     """
     A Photoshop-inspired RGBA color picker with:
     - HSV color wheel with triangle selector
@@ -72,6 +72,8 @@ class PhotoshopColorPicker(tk.Toplevel):
         
         self.preview_canvas = None
         self.preview_image = None
+
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
         
         # Build UI
         self._build_ui()
@@ -326,7 +328,7 @@ class PhotoshopColorPicker(tk.Toplevel):
         tk.Label(hex_frame, text="HEX:", bg='#3a3a3a', fg='white',
                 font=('Arial', 10, 'bold')).pack(side='left', padx=(0, 10))
         
-        self.hex_var = tk.StringVar(value=self._rgb_to_hex(self.r, self.g, self.b))
+        self.hex_var = tk.StringVar(value=utils.rgb_to_hex((self.r, self.g, self.b)))
         hex_entry = tk.Entry(hex_frame, textvariable=self.hex_var, bg='#2a2a2a',
                             fg='white', font=('Arial', 10), width=12,
                             insertbackground='white')
@@ -1000,6 +1002,7 @@ class PhotoshopColorPicker(tk.Toplevel):
         
         self.alpha = int(self.a_slider.get())
         self.a_value.config(text=str(self.alpha))
+        self._update_hex_text()
         self._draw_checkerboard()
     
     def _on_hex_change(self):
@@ -1014,6 +1017,15 @@ class PhotoshopColorPicker(tk.Toplevel):
                 self.r = int(hex_val[0:2], 16)
                 self.g = int(hex_val[2:4], 16)
                 self.b = int(hex_val[4:6], 16)
+                
+                self._update_from_rgb()
+            elif len(hex_val) == 8:
+                self.r = int(hex_val[0:2], 16)
+                self.g = int(hex_val[2:4], 16)
+                self.b = int(hex_val[4:6], 16)
+                self.alpha = int(hex_val[6:8], 16)
+                self.a_slider.set(self.alpha)
+                self.a_value.config(text=str(self.alpha))
                 
                 self._update_from_rgb()
         except ValueError:
@@ -1109,7 +1121,10 @@ class PhotoshopColorPicker(tk.Toplevel):
         self.v_slider.config(command=self._on_hsv_change)
     
     def _update_hex_text(self):
-        self.hex_var.set(self._rgb_to_hex(self.r, self.g, self.b))
+        if self.alpha < 255:
+            self.hex_var.set(f"{utils.rgb_to_hex((self.r, self.g, self.b, self.alpha))}")
+        else:
+            self.hex_var.set(f"{utils.rgb_to_hex((self.r, self.g, self.b))}")
 
     
     def _update_all(self, svonly=False):
@@ -1234,22 +1249,35 @@ class PhotoshopColorPicker(tk.Toplevel):
     def _on_save(self):
         """Save and close"""
         self.result = (self.r, self.g, self.b, self.alpha)
-        self.destroy()
+        self.on_close()
+        # self.destroy()
     
     def _on_cancel(self):
         """Cancel and close"""
         self.result = None
-        self.destroy()
+        self.on_close()
+        # self.destroy()
     
     def show(self):
         """Show dialog and wait for result"""
         self.wait_window(self)
         return self.result
+    
+    def on_close(self):
+        print("ColorPicker: on_close called")
+        #self.after_cancel(self.shed_focus_force)
+        self.destroy()
+        # Clean up the root window if we own it
+        if self._owns_root and self.master:
+            try:
+                self.master.destroy()
+            except:
+                pass
 
 
 if __name__ == '__main__':
     # Test the color picker
-    picker = PhotoshopColorPicker(initial=(0, 255, 217, 210))
+    picker = ColorPickerAPP(initial=(0, 255, 217, 210))
     result = picker.show()
     
     if result:

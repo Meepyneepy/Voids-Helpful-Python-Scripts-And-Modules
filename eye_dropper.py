@@ -37,8 +37,52 @@ except Exception as e:
 #     def __init__(self, root: tk.Tk) -> None:
 
 
-class EyeDropper(tk.Toplevel):
-    def __init__(self, parent=None, title="Color Eyedrop Tool"):
+class EyeDropperAPP(tk.Toplevel):
+    """
+A Tkinter-based color picker eyedropper tool with live preview and magnification.
+
+This class creates an interactive eyedropper interface that allows users to select colors
+from anywhere on the screen with pixel-perfect precision. It displays a magnified preview
+of the area around the cursor and shows color information in real-time.
+
+Args:
+    parent: Parent Tkinter window (optional). If None, creates its own root window.
+    initial: Initial color as RGB/RGBA tuple (e.g., (255, 0, 0)) or HEX string (e.g., "#FF0000") to display as comparison (optional)
+    title: Window title string (default: "Color Eyedrop Tool")
+
+Returns:
+    When show() is called, returns the selected color as an RGB tuple (r, g, b) where
+    each component is 0-255, or None if cancelled.
+
+Features:
+    - Live magnified preview (12x zoom) of cursor area
+    - Real-time hex and RGB color display
+    - Pixel-precise selection with arrow key adjustment
+    - Side-by-side comparison with initial color (if provided)
+    - Multi-monitor support (requires 'mss' module)
+    - Cross-platform cursor tracking with Windows optimization
+
+Controls:
+    - LEFT CLICK or ENTER: Select current color and close
+    - RIGHT CLICK: Refresh window position
+    - ESC: Cancel and close without selecting
+    - ARROW KEYS: Fine-tune pixel selection by shifting cursor position
+
+Usage:
+    # Simple color selection
+    picker = EyeDropper()
+    color = picker.show()
+    if color:
+        print(f"Selected: RGB{color}")
+    
+    # Compare against existing color
+    old_color = (255, 0, 0)
+    picker = EyeDropper(initial=old_color, title="Change Background Color")
+    new_color = picker.show()
+    if new_color:
+        print(f"Changed from {old_color} to {new_color}")
+"""
+    def __init__(self, parent=None, initial=None, title="Color Eyedrop Tool"):
         if parent is None:
             parent = tk.Tk()
             parent.withdraw()
@@ -59,6 +103,17 @@ class EyeDropper(tk.Toplevel):
         self.zoom = 12
         self.update_ms = 60
         self.result = None
+
+        self.initial_color_type = utils.get_color_type(initial)
+        print(f"Initial Color Type: {self.initial_color_type}")
+        print(f"Initial Color: {initial}")
+        if initial is not None and self.initial_color_type:
+            if self.initial_color_type == 'hex':
+                self.initial = utils.hex_to_rgb(initial)
+            else:
+                self.initial = initial
+        else:
+            self.initial = None
         
         self.window_size_height, self.window_size_width = 501,501   # The size of the clickable 'invisible' window
         self.preview_size_height, self.preview_size_width = 25,25   # (Odd for a center pixel) The size of the color preview / magnification box
@@ -69,7 +124,7 @@ class EyeDropper(tk.Toplevel):
 
         #self.root.geometry(f"{self.preview_window_size_height}x{self.preview_window_size_width}+100+100")
         self.preview_window_size_width = (self.preview_size_height * self.zoom) + 16
-        self.preview_window_size_height = (self.preview_size_width * self.zoom) + 120 + 8
+        self.preview_window_size_height = (self.preview_size_width * self.zoom) + 95 + 8
         self.geometry(f"{self.preview_window_size_width}x{self.preview_window_size_height}+100+100")
 
         self.root2 = tk.Toplevel()
@@ -80,7 +135,7 @@ class EyeDropper(tk.Toplevel):
         
         self.root2.geometry(f"{self.window_size_width}x{self.window_size_height}+{self.winfo_x()+self.winfo_width()+10}+{self.winfo_y()}")
         self.root2.attributes('-topmost', True)
-        self.lift(self.root2)
+        # self.lift(self.root2)
 
         
 
@@ -130,8 +185,8 @@ class EyeDropper(tk.Toplevel):
         self._tk_image = None
         self.current_rgb = (0, 0, 0)
 
-        self.bind('<Escape>', lambda e: self.destroy())
-        self.root2.bind('<Escape>', lambda e: self.destroy())
+        self.bind('<Escape>', lambda e: self.on_close())
+        self.root2.bind('<Escape>', lambda e: self.on_close())
 
         self.root2.bind('<ButtonRelease-1>', lambda e: self.return_color())
         self.root2.bind('<Return>', lambda e: self.return_color())
@@ -148,9 +203,13 @@ class EyeDropper(tk.Toplevel):
 
         # Start update loop
         #root.after(50, self._update_loop)
-        self.after(20, self._follow_mouse)
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.root2.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.sched_follow_mouse = self.after(20, self._follow_mouse)
 
+        self.focus_force()
 
+    
 
     def _sample_region(self, x: int, y: int, sizex: int = 50, sizey: int = 50):
         left = x - (sizex // 2)
@@ -192,7 +251,7 @@ class EyeDropper(tk.Toplevel):
     def _follow_mouse(self):
         x, y = self.get_cursor_pos()
         
-        if (x, y) != self.last_pos or self.just_shifted_mouse_pos is True:
+        if ((x, y) != self.last_pos and self.adjusted_mouse_pos == (0,0)) or self.just_shifted_mouse_pos is True:
             x_win_offset, y_win_offset = 50, 50
             if (x + x_win_offset + self.preview_window_size_width) > self.winfo_screenwidth():
                 x_win_offset = -50 - self.preview_window_size_width
@@ -202,7 +261,7 @@ class EyeDropper(tk.Toplevel):
 
             self.geometry(f"+{x + x_win_offset}+{y + y_win_offset}")
 
-        if (x, y) != self.last_pos or self.just_shifted_mouse_pos is True:
+        if ((x, y) != self.last_pos and self.adjusted_mouse_pos == (0,0)) or self.just_shifted_mouse_pos is True:
             if self._is_pos_within_window(x, y) is False or self.initialize is True:
                 # mouse is outside the window, move the window to follow and update region
                 self.root2.geometry(f"+{x - int(self.window_size_width / 2)}+{y - int(self.window_size_height / 2)}")
@@ -216,13 +275,15 @@ class EyeDropper(tk.Toplevel):
             self.last_pos = (x, y)
 
         
-        
-        self.root2.configure(bg=self.rgb_to_hex(self.current_rgb))
-        self.root2.focus_set()
-        self.root2.after(50, self._follow_mouse)  # update every 20ms
-
         self.initialize = False
         self.just_shifted_mouse_pos = False
+
+        self.root2.configure(bg=self.rgb_to_hex(self.current_rgb))
+        self.root2.focus_set()
+
+        self.sched_follow_mouse = self.root2.after(50, self._follow_mouse)  # update every 20ms
+
+        
 
 
     def _update_current_grab_image(self, x, y) -> None:
@@ -272,8 +333,10 @@ class EyeDropper(tk.Toplevel):
             img_size_x, img_size_y = self.preview_size_width * self.zoom, self.preview_size_height * self.zoom
             cx_pixel = img_size_x // 2
             cy_pixel = img_size_y // 2
-            self.canvas.create_line(cx_pixel + 5 - 10, cy_pixel + 5, cx_pixel + 5 + 10, cy_pixel + 5, fill='white')
-            self.canvas.create_line(cx_pixel + 5, cy_pixel + 5 - 10, cx_pixel + 5, cy_pixel + 5 + 10, fill='white')
+            self.canvas.create_line(cx_pixel + 5 - 10, cy_pixel + 5, cx_pixel + 5 + 10, cy_pixel + 5, fill=self.rgb_to_hex(utils.get_contrast_color(self.current_rgb)))
+            self.canvas.create_line(cx_pixel + 5, cy_pixel + 5 - 10, cx_pixel + 5, cy_pixel + 5 + 10, fill=self.rgb_to_hex(utils.get_contrast_color(self.current_rgb)))
+
+            # print(f"Contrast Color: {utils.get_contrast_color(self.current_rgb)}")
             # small cross marker at the center
 
             image_text = f"HEX: {hexc}\nRGB: {rgb}"
@@ -285,7 +348,18 @@ class EyeDropper(tk.Toplevel):
                 overlay = Image.new('RGBA', (img_size_x, img_size_y), (0, 0, 0, 0))
                 draw = ImageDraw.Draw(overlay)
                 draw.rectangle((0, img_size_y - rect_h, img_size_x, img_size_y), fill=(0, 0, 0, 80))
-                # convert to PhotoImage and keep reference to avoid GC
+                if self.initial is not None:
+                    # If inital color is provided, display it next to the new color
+                    rx1, ry1 = (img_size_x - (rect_h * 2)) + 10, (img_size_y - rect_h) + 5
+                    rx2, ry2 = img_size_x - (rect_h), img_size_y - 5
+                    draw.rectangle((rx1, ry1, rx2, ry2), fill=(self.initial[0], self.initial[1], self.initial[2], 255)) # Display new color
+                    draw.text(((rx1 + rx2) // 2, ry2), "OLD", fill=utils.get_contrast_color((self.initial[0], self.initial[1], self.initial[2])), anchor= "md")
+
+                rx1, ry1 = (img_size_x - rect_h) + 5, (img_size_y - rect_h) + 5
+                rx2, ry2 = img_size_x - 5, img_size_y - 5
+                
+                draw.rectangle((rx1, ry1, rx2, ry2), fill=(rgb[0], rgb[1], rgb[2], 255)) # Display new color
+                draw.text(((rx1 + rx2) // 2, ry2), "NEW", fill=utils.get_contrast_color((rgb[0], rgb[1], rgb[2])), anchor= "md")
                 self._overlay_image = ImageTk.PhotoImage(overlay)
                 self.canvas.create_image(0, 0, anchor='nw', image=self._overlay_image)
 
@@ -350,8 +424,16 @@ class EyeDropper(tk.Toplevel):
 
 
     def return_color(self) -> tuple[int, int, int]:
-        self.result = self.current_rgb
-        self.destroy()
+        if self.initial_color_type == 'hex':
+            print("returning hex")
+            self.result = utils.rgb_to_hex(self.current_rgb)
+        elif self.initial_color_type == 'rgba' and len(self.initial) == 4:
+            print("returning rgba")
+            self.result = (self.current_rgb[0], self.current_rgb[1], self.current_rgb[2], self.initial[3])
+        else:
+            print("returning rgb")
+            self.result = self.current_rgb
+        self.on_close()
     
     def refresh_color_window(self):
         print("refreshed")
@@ -362,12 +444,42 @@ class EyeDropper(tk.Toplevel):
         """Show dialog and wait for result"""
         self.wait_window(self)
         return self.result
+    
+    def on_close(self):
+        """Handle window close event and stop the update loop"""
+        print("eye_dropper: on_close called")
+
+        self.after_cancel(self.sched_follow_mouse)
+        
+        # Clean up root2 window
+        if hasattr(self, 'root2') and self.root2:
+            try:
+                self.root2.destroy()
+            except:
+                pass
+        
+        # Clean up mss if it exists
+        if hasattr(self, '_sct') and self._sct:
+            try:
+                self._sct.close()
+            except:
+                pass
+        
+        # Destroy the main window
+        self.destroy()
+        
+        # Clean up the root window if we own it
+        if self._owns_root and self.master:
+            try:
+                self.master.destroy()
+            except:
+                pass
 
 
 
 if __name__ == '__main__':
     # Test the color picker
-    eyedropper = EyeDropper()
+    eyedropper = EyeDropperAPP(initial=(255,0,0))
     result = eyedropper.show()
     
     if result:
