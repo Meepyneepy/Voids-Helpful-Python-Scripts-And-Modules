@@ -99,7 +99,7 @@ class ButtonGeneratorApp:
     def test_color_picker_redesign(self):
         """Test color_picker_redesign"""
         import color_picker_redesign
-        picker = color_picker_redesign.PhotoshopColorPicker(
+        picker = color_picker_redesign.ColorPickerAPP(
             self.root,
             initial=self.last_saved_color,
             title="Edit Color"
@@ -115,7 +115,7 @@ class ButtonGeneratorApp:
     def test_module_manager(self):
         """Test module_manager_redesign"""
         import module_manager_redesign
-        manager = module_manager_redesign.ModuleCheckerGUI(self.root, "eye_dropper_TEST.py")
+        manager = module_manager_redesign.ModuleCheckerAPP(self.root, "eye_dropper_TEST.py")
         manager.show()
 
 
